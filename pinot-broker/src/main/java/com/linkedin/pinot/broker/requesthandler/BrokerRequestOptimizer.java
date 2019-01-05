@@ -37,9 +37,9 @@ public class BrokerRequestOptimizer {
    * @param timeColumn Time column for the table
    * @return An optimized request
    */
-  public BrokerRequest optimize(BrokerRequest brokerRequest, String timeColumn) {
+  public BrokerRequest optimize(BrokerRequest brokerRequest, String timeColumn, FilterQueryTree filterQueryTree) {
     OptimizationFlags optimizationFlags = OptimizationFlags.getOptimizationFlags(brokerRequest);
-    optimizeFilterQueryTree(brokerRequest, timeColumn, optimizationFlags);
+    optimizeFilterQueryTree(brokerRequest, timeColumn, optimizationFlags, filterQueryTree);
 
     return brokerRequest;
   }
@@ -50,15 +50,16 @@ public class BrokerRequestOptimizer {
    * @param timeColumn time column
    */
   private void optimizeFilterQueryTree(BrokerRequest brokerRequest, String timeColumn,
-      OptimizationFlags optimizationFlags) {
-    FilterQueryTree filterQueryTree = null;
+      OptimizationFlags optimizationFlags, FilterQueryTree filterQueryTree) {
     FilterQuery q = brokerRequest.getFilterQuery();
 
     if (q == null || brokerRequest.getFilterSubQueryMap() == null) {
       return;
     }
 
-    filterQueryTree = RequestUtils.buildFilterQuery(q.getId(), brokerRequest.getFilterSubQueryMap().getFilterQueryMap());
+    if (filterQueryTree == null) {
+      filterQueryTree = RequestUtils.buildFilterQuery(q.getId(), brokerRequest.getFilterSubQueryMap().getFilterQueryMap());
+    }
     FilterQueryOptimizerRequest.FilterQueryOptimizerRequestBuilder builder =
         new FilterQueryOptimizerRequest.FilterQueryOptimizerRequestBuilder();
 

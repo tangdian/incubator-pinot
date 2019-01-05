@@ -487,6 +487,7 @@ public abstract class ClusterTest extends ControllerTest {
     JSONObject payload = new JSONObject();
     payload.put("pql", query);
     payload.put("trace", enableTrace);
+    payload.put("validateQuery", true);
 
     return new JSONObject(sendPostRequest(brokerBaseApiUrl + "/query", payload.toString()));
   }
