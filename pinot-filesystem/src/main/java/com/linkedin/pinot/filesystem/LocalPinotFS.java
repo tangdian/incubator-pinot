@@ -97,7 +97,8 @@ public class LocalPinotFS extends PinotFS {
   public boolean copy(URI srcUri, URI dstUri) throws IOException {
     File srcFile = new File(decodeURI(srcUri.getRawPath()));
     File dstFile = new File(decodeURI(dstUri.getRawPath()));
-    if (dstFile.exists()) {
+    // delete dst only if dst isn't under src.
+    if (!dstFile.getCanonicalPath().startsWith(srcFile.getCanonicalPath()) && dstFile.exists()) {
       FileUtils.deleteQuietly(dstFile);
     }
     if (srcFile.isDirectory()) {
@@ -112,6 +113,9 @@ public class LocalPinotFS extends PinotFS {
 
   @Override
   public boolean exists(URI fileUri) throws IOException {
+    if (fileUri == null) {
+      return false;
+    }
     File file = new File(decodeURI(fileUri.getRawPath()));
     return file.exists();
   }
