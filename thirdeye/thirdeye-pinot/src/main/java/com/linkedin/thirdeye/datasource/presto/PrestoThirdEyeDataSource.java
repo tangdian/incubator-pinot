@@ -192,7 +192,7 @@ public class PrestoThirdEyeDataSource implements ThirdEyeDataSource {
 
   @Override
   public long getMaxDataTime(String dataset) throws Exception {
-    return 0;
+    return this.delegate.getMaxDataTime(dataset);
   }
 
   @Override
