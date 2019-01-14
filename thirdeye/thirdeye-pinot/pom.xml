@@ -131,6 +131,11 @@
       <groupId>org.reflections</groupId>
       <artifactId>reflections</artifactId>
     </dependency>
+    <dependency>
+      <groupId>com.facebook.presto</groupId>
+      <artifactId>presto-jdbc</artifactId>
+      <version>0.215</version>
+    </dependency>
 
     <!-- dataframe specific -->
     <dependency>

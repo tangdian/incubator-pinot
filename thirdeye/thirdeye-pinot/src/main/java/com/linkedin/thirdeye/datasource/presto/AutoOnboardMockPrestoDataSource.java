@@ -1,4 +1,4 @@
-package com.linkedin.thirdeye.datasource.mock;
+package com.linkedin.thirdeye.datasource.presto;
 
 import com.linkedin.thirdeye.auto.onboard.AutoOnboard;
 import com.linkedin.thirdeye.datalayer.bao.DatasetConfigManager;
@@ -24,8 +24,8 @@ import org.slf4j.LoggerFactory;
 /**
  * Scans mock configs and creates metrics for MockThirdEyeDataSource
  */
-public class AutoOnboardMockDataSource extends AutoOnboard {
-  private static final Logger LOG = LoggerFactory.getLogger(AutoOnboardMockDataSource.class);
+public class AutoOnboardMockPrestoDataSource extends AutoOnboard {
+  private static final Logger LOG = LoggerFactory.getLogger(AutoOnboardMockPrestoDataSource.class);
 
   private final MetricConfigManager metricDAO;
   private final DatasetConfigManager datasetDAO;
@@ -35,7 +35,7 @@ public class AutoOnboardMockDataSource extends AutoOnboard {
    *
    * @param metadataSourceConfig meta data source config
    */
-  public AutoOnboardMockDataSource(MetadataSourceConfig metadataSourceConfig) {
+  public AutoOnboardMockPrestoDataSource(MetadataSourceConfig metadataSourceConfig) {
     super(metadataSourceConfig);
     this.metricDAO = DAORegistry.getInstance().getMetricConfigDAO();
     this.datasetDAO = DAORegistry.getInstance().getDatasetConfigDAO();
