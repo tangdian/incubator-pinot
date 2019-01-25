@@ -17,6 +17,7 @@
 package org.apache.pinot.thirdeye.datasource.pinot;
 
 import org.apache.pinot.thirdeye.constant.MetricAggFunction;
+import org.apache.pinot.thirdeye.datasource.pinot.resultset.ThirdEyeResultSetUtils;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -45,28 +46,28 @@ public class PinotThirdEyeDataSourceTest {
 
   @Test
   public void testReduceSum() {
-    Assert.assertEquals(PinotThirdEyeDataSource.reduce(10, 3, 4, MetricAggFunction.SUM), 13.0);
+    Assert.assertEquals(ThirdEyeResultSetUtils.reduce(10, 3, 4, MetricAggFunction.SUM), 13.0);
   }
 
   @Test
   public void testReduceAvg() {
-    Assert.assertEquals(PinotThirdEyeDataSource.reduce(10, 2, 3, MetricAggFunction.AVG), 8.0);
+    Assert.assertEquals(ThirdEyeResultSetUtils.reduce(10, 2, 3, MetricAggFunction.AVG), 8.0);
   }
 
   @Test
   public void testReduceMax() {
-    Assert.assertEquals(PinotThirdEyeDataSource.reduce(10, 3, 12, MetricAggFunction.MAX), 10.0);
+    Assert.assertEquals(ThirdEyeResultSetUtils.reduce(10, 3, 12, MetricAggFunction.MAX), 10.0);
   }
 
   @Test
   public void testReduceCount() {
-    Assert.assertEquals(PinotThirdEyeDataSource.reduce(4, 3, 4, MetricAggFunction.COUNT), 5.0);
+    Assert.assertEquals(ThirdEyeResultSetUtils.reduce(4, 3, 4, MetricAggFunction.COUNT), 5.0);
   }
 
   @Test
   public void testReduceTDigest() {
-    Assert.assertEquals(PinotThirdEyeDataSource.reduce(10, 2, 3, MetricAggFunction.PCT50), 8.0);
-    Assert.assertEquals(PinotThirdEyeDataSource.reduce(10, 2, 3, MetricAggFunction.PCT90), 8.0);
+    Assert.assertEquals(ThirdEyeResultSetUtils.reduce(10, 2, 3, MetricAggFunction.PCT50), 8.0);
+    Assert.assertEquals(ThirdEyeResultSetUtils.reduce(10, 2, 3, MetricAggFunction.PCT90), 8.0);
   }
 
 }

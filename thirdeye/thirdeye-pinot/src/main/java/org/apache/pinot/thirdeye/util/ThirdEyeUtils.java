@@ -340,6 +340,11 @@ public abstract class ThirdEyeUtils {
     return dataset;
   }
 
+  public static String computePrestoTableName(String datasetName) {
+    String[] tableComponents = datasetName.split("\\.");
+    return tableComponents[1] + "." + tableComponents[2] + "." + tableComponents[3];
+  }
+
   public static Period getbaselineOffsetPeriodByMode(COMPARE_MODE compareMode) {
     int numWeeksAgo = 1;
     switch (compareMode) {

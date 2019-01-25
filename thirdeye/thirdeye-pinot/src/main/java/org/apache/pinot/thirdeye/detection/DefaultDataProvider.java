@@ -56,7 +56,7 @@ import org.slf4j.LoggerFactory;
 
 public class DefaultDataProvider implements DataProvider {
   private static final Logger LOG = LoggerFactory.getLogger(DefaultDataProvider.class);
-  private static final long TIMEOUT = 60000;
+  private static final long TIMEOUT = 600000;
 
   private final ExecutorService executor = Executors.newCachedThreadPool();
 

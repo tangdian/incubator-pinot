@@ -1,0 +1,15 @@
+prestoSourcesConfigs:
+  faro.tpch.tiny.lineitem:
+    timeColumn: commitdate
+    dimensions: [linenumber, returnflag, linestatus]
+    metrics:
+      extendedprice: SUM
+      discount: AVG
+    timeFormat: YYYY-MM-dd
+    granularity: 1day
+#  faro.hive.service.MRJobTaskEvent:
+#    timeColumn: starttime
+#    dimensions: [grid, taskstatus]
+#    metrics:
+#      finishtime: AVG
+#    granularity: 1MILLISECOND

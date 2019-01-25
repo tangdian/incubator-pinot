@@ -66,7 +66,7 @@ import org.slf4j.LoggerFactory;
 public class MetricAnalysisPipeline extends Pipeline {
   private static final Logger LOG = LoggerFactory.getLogger(MetricAnalysisPipeline.class);
 
-  private static final long TIMEOUT = 60000;
+  private static final long TIMEOUT = 600000;
 
   private static final long TRAINING_OFFSET = TimeUnit.DAYS.toMillis(7);
 
@@ -247,7 +247,12 @@ public class MetricAnalysisPipeline extends Pipeline {
     }
 
     final LongSeries timestamps = data.getLongs(COL_TIME);
+//    System.out.println(timestamps);
     final long granularity = timestamps.subtract(timestamps.shift(1)).dropNull().head(1).longValue();
+//    System.out.println(timestamps.shift(1));
+//    System.out.println(timestamps.subtract(timestamps.shift(1)));
+//    System.out.println(timestamps.subtract(timestamps.shift(1)).dropNull());
+//    System.out.println(granularity);
     if ((start / granularity) == (end / granularity)) {
       // not crossing bucket boundary, return nearest lower timestamp
       return data.filterEquals(COL_TIME, (start / granularity) * granularity).dropNull();

@@ -85,6 +85,10 @@ public class ThirdEyeConfiguration extends Configuration {
     return dataSources;
   }
 
+  public String getPrestoConfigPath() {
+    return getRootDir() + "/data-sources/presto-sources-config.yml";
+  }
+
   public String getRootDir() {
     return rootDir;
   }
