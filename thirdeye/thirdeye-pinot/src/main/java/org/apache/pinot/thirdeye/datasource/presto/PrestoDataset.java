@@ -45,6 +45,4 @@ public class PrestoDataset {
   public String getTimeFormat() {
     return timeFormat;
   }
-
-
 }

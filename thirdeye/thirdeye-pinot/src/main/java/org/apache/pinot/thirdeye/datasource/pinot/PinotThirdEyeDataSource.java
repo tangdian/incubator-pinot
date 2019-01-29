@@ -216,7 +216,6 @@ public class PinotThirdEyeDataSource implements ThirdEyeDataSource {
 
       List<String[]> resultRows = ThirdEyeResultSetUtils.parseResultSets(request, metricFunctionToResultSetList);
       PinotThirdEyeResponse r = new PinotThirdEyeResponse(request, resultRows, timeSpec);
-      System.out.println(r);
       return r;
 
     } catch (Exception e) {

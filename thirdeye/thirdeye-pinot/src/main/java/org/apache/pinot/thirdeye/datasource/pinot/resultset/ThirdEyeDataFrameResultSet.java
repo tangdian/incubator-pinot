@@ -95,7 +95,7 @@ public class ThirdEyeDataFrameResultSet extends AbstractThirdEyeResultSet {
 
   public static ThirdEyeDataFrameResultSet fromSQLResultSet(java.sql.ResultSet resultSet, String metric,
       List<String> groupByKeys, TimeGranularity aggGranularity, TimeSpec timeSpec) {
-    System.out.println("FROM SQL RESULT SET");
+//    System.out.println("FROM SQL RESULT SET");
 
 
     List<String> groupKeyColumnNames = new ArrayList<>();
@@ -126,8 +126,8 @@ public class ThirdEyeDataFrameResultSet extends AbstractThirdEyeResultSet {
       int metricColumnCount = metrics.size();
       int groupByColumnCount = groupKeyColumnNames.size();
       int totalColumnCount = groupByColumnCount + metricColumnCount;
-      System.out.println(groupKeyColumnNames);
-      System.out.println(metrics);
+//      System.out.println(groupKeyColumnNames);
+//      System.out.println(metrics);
 
       outer: while (resultSet.next()) {
         String[] columnsOfTheRow = new String[totalColumnCount];

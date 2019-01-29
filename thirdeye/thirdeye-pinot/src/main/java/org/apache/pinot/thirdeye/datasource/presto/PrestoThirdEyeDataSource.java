@@ -1,18 +1,16 @@
 package org.apache.pinot.thirdeye.datasource.presto;
-import com.google.common.collect.Multimap;
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
-import java.sql.Statement;
+import com.google.common.base.Preconditions;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.LoadingCache;
+import com.google.common.cache.RemovalListener;
+import com.google.common.cache.RemovalNotification;
+import com.google.common.cache.Weigher;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import org.apache.commons.lang.StringUtils;
-import org.apache.pinot.thirdeye.api.TimeGranularity;
+import java.util.concurrent.TimeUnit;
 import org.apache.pinot.thirdeye.api.TimeSpec;
-import org.apache.pinot.thirdeye.dashboard.Utils;
 import org.apache.pinot.thirdeye.datalayer.dto.DatasetConfigDTO;
 import org.apache.pinot.thirdeye.datasource.MetricFunction;
 import org.apache.pinot.thirdeye.datasource.ThirdEyeCacheRegistry;
@@ -20,41 +18,30 @@ import org.apache.pinot.thirdeye.datasource.ThirdEyeDataSource;
 import org.apache.pinot.thirdeye.datasource.ThirdEyeRequest;
 import org.apache.pinot.thirdeye.datasource.ThirdEyeResponse;
 import org.apache.pinot.thirdeye.datasource.pinot.resultset.ThirdEyeResultSet;
-import org.apache.pinot.thirdeye.detection.ConfigUtils;
 import org.apache.pinot.thirdeye.util.ThirdEyeUtils;
-import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
-import org.joda.time.Period;
-import org.joda.time.format.DateTimeFormat;
-import org.joda.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.pinot.thirdeye.datasource.pinot.resultset.ThirdEyeResultSetUtils;
 
-import static org.apache.pinot.thirdeye.datasource.pinot.resultset.ThirdEyeDataFrameResultSet.*;
 
 
 public class PrestoThirdEyeDataSource implements ThirdEyeDataSource {
   private static final Logger LOG = LoggerFactory.getLogger(PrestoThirdEyeDataSource.class);
   private static final ThirdEyeCacheRegistry CACHE_REGISTRY_INSTANCE = ThirdEyeCacheRegistry.getInstance();
+  protected LoadingCache<PrestoQuery, ThirdEyeResultSet> prestoResponseCache;
+  private PrestoResponseCacheLoader prestoResponseCacheLoader;
+  public static final String DATA_SOURCE_NAME = PrestoThirdEyeDataSource.class.getSimpleName();
 
-  private final String PRESTO_URL = "prestoURLs";
-  private static final String JDBC_USER = "user";
-  private static final String JDBC_PASSWORD = "password";
-
-  private Map<String, PrestoClient> dbNameToClientMap = new HashMap<>();
-  private String user;
-  private String password;
+  // TODO: make default cache size configurable
+  private static final int DEFAULT_HEAP_PERCENTAGE_FOR_RESULTSETGROUP_CACHE = 50;
+  private static final int DEFAULT_LOWER_BOUND_OF_RESULTSETGROUP_CACHE_SIZE_IN_MB = 100;
+  private static final int DEFAULT_UPPER_BOUND_OF_RESULTSETGROUP_CACHE_SIZE_IN_MB = 8192;
 
   public PrestoThirdEyeDataSource(Map<String, Object> properties) throws Exception {
-    Map<String, String> dbNameToURLMap = ConfigUtils.getMap(properties.get(PRESTO_URL));
-    user = (String)properties.get(JDBC_USER);
-    password = (String)properties.get(JDBC_PASSWORD);
+    prestoResponseCacheLoader = new PrestoResponseCacheLoader(properties);
+
+    prestoResponseCache = buildResponseCache(prestoResponseCacheLoader);
     PrestoConfigLoader loader = new PrestoConfigLoader();
-    for (Map.Entry<String, String> entry: dbNameToURLMap.entrySet()) {
-      PrestoClient client = new PrestoClient(entry.getValue(), user, password);
-      dbNameToClientMap.put(entry.getKey(), client);
-    }
     loader.onboard();
   }
 
@@ -76,38 +63,33 @@ public class PrestoThirdEyeDataSource implements ThirdEyeDataSource {
       if (timeSpec == null) {
         timeSpec = dataTimeSpec;
       }
-      Multimap<String, String> decoratedFilterSet = request.getFilterSet();
 
       String[] tableComponents = dataset.split("\\.");
       String dbName = tableComponents[0];
 
-      String sqlQuery = SqlUtils.getSql(request, metricFunction, decoratedFilterSet, dataTimeSpec);
-      ThirdEyeResultSet thirdEyeResultSet = executeSQL(sqlQuery, dbName, metricFunction, request.getGroupBy(), request.getGroupByTimeGranularity(), dataTimeSpec);
+      String sqlQuery = SqlUtils.getSql(request, metricFunction, request.getFilterSet(), dataTimeSpec);
+      System.out.println(sqlQuery);
+      ThirdEyeResultSet thirdEyeResultSet = executeSQL(new PrestoQuery(sqlQuery, dbName,
+          metricFunction.getMetricName(), request.getGroupBy(), request.getGroupByTimeGranularity(), dataTimeSpec));
+
       List<ThirdEyeResultSet> resultSetList = new ArrayList<>();
       resultSetList.add(thirdEyeResultSet);
+
       metricFunctionToResultSetList.put(metricFunction, resultSetList);
       List<String[]> resultRows = ThirdEyeResultSetUtils.parseResultSets(request, metricFunctionToResultSetList);
+
       return new PrestoThirdEyeResponse(request, resultRows, timeSpec);
     }
 
     return null;
   }
 
-  public ThirdEyeResultSet executeSQL(String SqlQuery, String dbName, MetricFunction metricFunction, List<String> groupByKeys, TimeGranularity granularity, TimeSpec timeSpec) throws Exception {
-    String metric = metricFunction.getMetricName();
+  public ThirdEyeResultSet executeSQL(PrestoQuery prestoQuery) throws Exception {
     ThirdEyeResultSet thirdEyeResultSet = null;
-    Connection conn = null;
     try {
-      conn = dbNameToClientMap.get(dbName).getConnection();
-      Statement stmt = conn.createStatement();
-      ResultSet rs = stmt.executeQuery(SqlQuery);
-      System.out.println(SqlQuery);
-      thirdEyeResultSet = fromSQLResultSet(rs, metric, groupByKeys, granularity, timeSpec);
-
+      thirdEyeResultSet = prestoResponseCache.get(prestoQuery);
     } catch (Exception e) {
       throw new RuntimeException(e);
-    } finally {
-      conn.close();
     }
     return thirdEyeResultSet;
   }
@@ -129,45 +111,63 @@ public class PrestoThirdEyeDataSource implements ThirdEyeDataSource {
 
   @Override
   public long getMaxDataTime(String dataset) throws Exception {
-    DatasetConfigDTO datasetConfig = ThirdEyeUtils.getDatasetConfigFromName(dataset);
-    TimeSpec timeSpec = ThirdEyeUtils.getTimestampTimeSpecFromDatasetConfig(datasetConfig);
-    DateTimeZone timeZone = Utils.getDataTimeZone(dataset);
-    long maxTime = 0;
-
-    String[] tableComponents = dataset.split("\\.");
-    String dbName = tableComponents[0];
-    String tableName = ThirdEyeUtils.computePrestoTableName(dataset);
-
-    Connection conn = null;
-    try {
-      conn = dbNameToClientMap.get(dbName).getConnection();
-      Statement stmt = conn.createStatement();
-      ResultSet rs = stmt.executeQuery("SELECT MAX(" + timeSpec.getColumnName() + ") FROM " + tableName);
-
-      if (rs.next()) {
-        String maxTimeString = rs.getString(1);
-        String timeFormat = timeSpec.getFormat();
-
-        if (StringUtils.isBlank(timeFormat) || TimeSpec.SINCE_EPOCH_FORMAT.equals(timeFormat)) {
-          maxTime = timeSpec.getDataGranularity().toMillis(Integer.valueOf(maxTimeString) - 1, timeZone);
-        } else {
-          DateTimeFormatter inputDataDateTimeFormatter =
-              DateTimeFormat.forPattern(timeFormat).withZone(timeZone);
-          DateTime endDateTime = DateTime.parse(maxTimeString, inputDataDateTimeFormatter);
-          Period oneBucket = datasetConfig.bucketTimeGranularity().toPeriod();
-          maxTime = endDateTime.plus(oneBucket).getMillis() - 1;
-        }
-      }
-    } catch (Exception e) {
-      throw new RuntimeException(e);
-    } finally {
-      conn.close();
-    }
-    return maxTime;
+    System.out.println("Getting max data time");
+    return prestoResponseCacheLoader.getMaxDataTime(dataset);
   }
 
   @Override
   public Map<String, List<String>> getDimensionFilters(String dataset) throws Exception {
-    return null;
+    System.out.println("Running dimension filters");
+    return this.prestoResponseCacheLoader.getDimensionFilters(dataset);
+  }
+
+  private static LoadingCache<PrestoQuery, ThirdEyeResultSet> buildResponseCache(
+      PrestoResponseCacheLoader prestoResponseCacheLoader) throws Exception {
+    Preconditions.checkNotNull(prestoResponseCacheLoader, "A loader that sends query to Pinot is required.");
+
+    // Initializes listener that prints expired entries in debuggin mode.
+    RemovalListener<PrestoQuery, ThirdEyeResultSet> listener;
+    if (LOG.isDebugEnabled()) {
+      listener = new RemovalListener<PrestoQuery, ThirdEyeResultSet>() {
+        @Override
+        public void onRemoval(RemovalNotification<PrestoQuery, ThirdEyeResultSet> notification) {
+          LOG.debug("Expired {}", notification.getKey().getSql());
+        }
+      };
+    } else {
+      listener = new RemovalListener<PrestoQuery, ThirdEyeResultSet>() {
+        @Override public void onRemoval(RemovalNotification<PrestoQuery, ThirdEyeResultSet> notification) { }
+      };
+    }
+
+    // ResultSetGroup Cache. The size of this cache is limited by the total number of buckets in all ResultSetGroup.
+    // We estimate that 1 bucket (including overhead) consumes 1KB and this cache is allowed to use up to 50% of max
+    // heap space.
+    long maxBucketNumber = getApproximateMaxBucketNumber(DEFAULT_HEAP_PERCENTAGE_FOR_RESULTSETGROUP_CACHE);
+    LOG.debug("Max bucket number for {}'s cache is set to {}", DATA_SOURCE_NAME, maxBucketNumber);
+
+    return CacheBuilder.newBuilder()
+        .removalListener(listener)
+        .expireAfterWrite(15, TimeUnit.MINUTES)
+        .maximumWeight(maxBucketNumber)
+        .weigher(new Weigher<PrestoQuery, ThirdEyeResultSet>() {
+          @Override public int weigh(PrestoQuery prestoQuery, ThirdEyeResultSet resultSet) {
+              return ((resultSet.getColumnCount() + resultSet.getGroupKeyLength()) * resultSet.getRowCount());
+          }
+        })
+        .build(prestoResponseCacheLoader);
+  }
+
+  private static long getApproximateMaxBucketNumber(int percentage) {
+    long jvmMaxMemoryInBytes = Runtime.getRuntime().maxMemory();
+    if (jvmMaxMemoryInBytes == Long.MAX_VALUE) { // Check upper bound
+      jvmMaxMemoryInBytes = DEFAULT_UPPER_BOUND_OF_RESULTSETGROUP_CACHE_SIZE_IN_MB * 1048576L; // MB to Bytes
+    } else { // Check lower bound
+      long lowerBoundInBytes = DEFAULT_LOWER_BOUND_OF_RESULTSETGROUP_CACHE_SIZE_IN_MB * 1048576L; // MB to Bytes
+      if (jvmMaxMemoryInBytes < lowerBoundInBytes) {
+        jvmMaxMemoryInBytes = lowerBoundInBytes;
+      }
+    }
+    return (jvmMaxMemoryInBytes / 102400) * percentage;
   }
 }

@@ -60,7 +60,7 @@ public class RCAFramework {
 
   public static final String INPUT = "INPUT";
   public static final String OUTPUT = "OUTPUT";
-  public static final long TIMEOUT = 600000;
+  public static final long TIMEOUT = 6000000;
 
   private final Map<String, Pipeline> pipelines;
   private final ExecutorService executor;

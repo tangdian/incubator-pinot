@@ -27,6 +27,7 @@ public class PrestoConfigLoader {
   private final DatasetConfigManager datasetDAO;
 
   public PrestoConfigLoader() {
+    System.out.println("Loading!!!!!");
     this.metricDAO = DAORegistry.getInstance().getMetricConfigDAO();
     this.datasetDAO = DAORegistry.getInstance().getDatasetConfigDAO();
   }

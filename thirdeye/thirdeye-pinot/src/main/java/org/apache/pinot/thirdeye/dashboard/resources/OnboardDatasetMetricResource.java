@@ -69,7 +69,7 @@ public class OnboardDatasetMetricResource {
 
 
   /**
-   * Create this by providing json payload as follows:
+   * Create this by providing json payload aOs follows:
    *
    *    curl -H "Content-Type: application/json" -X POST -d <payload> <url>
    *    Eg: curl -H "Content-Type: application/json" -X POST -d

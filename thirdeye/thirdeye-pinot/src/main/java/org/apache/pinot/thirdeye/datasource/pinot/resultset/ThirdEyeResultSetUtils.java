@@ -77,7 +77,7 @@ public class ThirdEyeResultSetUtils {
       List<ThirdEyeResultSet> resultSets = entry.getValue();
       for (int i = 0; i < resultSets.size(); i++) {
         ThirdEyeResultSet resultSet = resultSets.get(i);
-        System.out.println(resultSet);
+//        System.out.println(resultSet);
         int numRows = resultSet.getRowCount();
         for (int r = 0; r < numRows; r++) {
           boolean skipRowDueToError = false;
