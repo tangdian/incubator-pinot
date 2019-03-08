@@ -211,6 +211,7 @@ public class DetectionUtils {
    */
   public static Period getMonitoringGranularityPeriod(String monitoringGranularity, DatasetConfigDTO datasetConfigDTO) {
     if (monitoringGranularity.equals(MetricSlice.NATIVE_GRANULARITY.toAggregationGranularityString())) {
+//      System.out.println(datasetConfigDTO);
       return datasetConfigDTO.bucketTimeGranularity().toPeriod();
     }
     if (monitoringGranularity.equals("1_MONTHS")) {
