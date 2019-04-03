@@ -20,7 +20,7 @@ Online monitoring and analysis of business and system metrics from multiple data
 * Knowledge graph construction over time from user feedback
 
 **Integration**
-* Connectors for continuous time series data from Pinot and CSV 
+* Connectors for continuous time series data from Pinot, Presto, MySQL and CSV
 * Connectors for discrete event data sources, such as holidays from Google calendar
 * Plugin support for detection and analysis components
 
@@ -81,10 +81,117 @@ Available metrics in demo mode are:
 
 Note: These metrics are regenerated randomly every time you launch ThirdEye in demo mode
 
+We also have 2 real world metric with seasonality in H2 database, for detection experimentation:
+
+* H2::daily
+* H2::hourly
+
 
 ### 6: Shutdown
 
 You can stop the ThirdEye dashboard server anytime by pressing **Ctrl + C** in the terminal
+
+## Start ThirdEye with MySQL / Presto
+
+ThirdEye now supports data from MySQL and Presto!
+
+### 1. Set the config
+
+#### MySQL Config
+
+Add your MySQL database URL and credentials in `thirdeye-pinot/config/datasources/data-sources-config.yml`.
+You will be able to add multiple databases with multiple credentials, as follows:
+
+```
+dataSourceConfigs:
+  - className: org.apache.pinot.thirdeye.datasource.sql.SqlThirdEyeDataSource
+    properties:
+      MySQL:
+        - db:
+            <dbname1>: jdbc:mysql://<db url1>
+            <dbname2>: jdbc:mysql://<db url2>
+          user: <username>
+          password: <password>
+         - db:
+            <dbname3>: jdbc:mysql://<db url3>
+            <dbname4>: jdbc:mysql://<db url4>
+          user: <username2>
+          password: <password2>
+```
+Note: the `dbname` here is an arbitrary name that you want to name it. 
+In `dburl`, you still need to include the specific database you are using. For example:
+```
+dataSourceConfigs:
+  - className: org.apache.pinot.thirdeye.datasource.sql.SqlThirdEyeDataSource
+    properties:
+      MySQL:
+        - db:
+            te: jdbc:mysql://localhost:3306/thirdeye
+          user: root
+          password: ""
+```
+
+#### Presto Config
+
+Similar to MySQL config, in in `thirdeye-pinot/config/datasources/data-sources-config.yml`.
+
+```
+dataSourceConfigs:
+  - className: org.apache.pinot.thirdeye.datasource.sql.SqlThirdEyeDataSource
+    properties:
+      Presto:
+        - db:
+            <dbname1>: jdbc:presto://<db url1>
+            <dbname2>: jdbc:presto://<db url2>
+          user: <username>
+          password: <password>
+         - db:
+            <dbname3>: jdbc:presto://<db url3>
+            <dbname4>: jdbc:presto://<db url4>
+          user: <username2>
+          password: <password2>
+```
+
+### 2. Run ThirdEye frontend
+
+```
+./run-frontend.sh
+```
+
+
+### 3. Import metric from Presto/MySQL
+No credential is needed for login. 
+Click `Create Alert` on top right of the page, click `Import a Metric from SQL` link under `Define detection configuration`.
+Fill in the form which includes the following fields, and click Import Metrics.
+ 
+`Table Name`: For Presto, it is the Presto table name, including all schema prefixes. For MySQL it is just the table name.
+
+`Time column`: Column name that contains the time.
+
+`Timezone`: Timezone of the time column.
+
+`Time Format`: Format of the time column.
+
+`Time Granularity`: The granularity of your metric. For example, daily data should choose 1DAYS. 
+Hourly data should choose 1HOURS.
+
+`Dimensions`: Add dimensions and fill in the name of the dimension
+
+`Metrics`: Add metrics and fill in the name and the aggregation method on the dimension when it is being aggregated by time.
+
+For example:
+
+![image](https://user-images.githubusercontent.com/11586489/56252038-cb974880-606a-11e9-9213-a06bfa533826.png)
+
+### 4: Start an analysis
+
+Point your favorite browser to
+
+```
+http://localhost:1426/app/#/rootcause
+```
+
+and type any data set or metric name (fragment) in the search box. Auto-complete will now list the names of matching metrics. Select any metric to start an investigation.
 
 
 ## Start ThirdEye with Pinot
@@ -148,7 +255,7 @@ By pressing **Ctrl-C** in the terminal
 ```
 
 
-### 4: Start an analysis
+### 6: Start an analysis
 
 Point your favorite browser to
 
@@ -157,6 +264,9 @@ http://localhost:1426/app/#/rootcause
 ```
 
 and type any data set or metric name (fragment) in the search box. Auto-complete will now list the names of matching metrics. Select any metric to start an investigation.
+
+## Setting up alert
+
 
 **Welcome to ThirdEye**
 
